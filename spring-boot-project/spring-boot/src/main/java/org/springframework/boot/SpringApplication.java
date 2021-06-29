@@ -325,23 +325,34 @@ public class SpringApplication {
 		DefaultBootstrapContext bootstrapContext = createBootstrapContext();
 		ConfigurableApplicationContext context = null;
 		configureHeadlessProperty();
+		// 1. 通过 SpringFactoriesLoader 加载 META-INF/spring.factories 文件，获取并创建 SpringApplicationRunListener 对象
 		SpringApplicationRunListeners listeners = getRunListeners(args);
+		// 2. 由 SpringApplicationRunListener 来发出 starting 消息
 		listeners.starting(bootstrapContext, this.mainApplicationClass);
 		try {
+			// 3. 创建参数，并配置当前 SpringBoot 应用将要使用的 Environment
 			ApplicationArguments applicationArguments = new DefaultApplicationArguments(args);
+			// 4. 完成之后，依然由 SpringApplicationRunListener 来发出 environmentPrepared 消息
 			ConfigurableEnvironment environment = prepareEnvironment(listeners, bootstrapContext, applicationArguments);
 			configureIgnoreBeanInfo(environment);
 			Banner printedBanner = printBanner(environment);
+			// 5. 创建 ApplicationContext
 			context = createApplicationContext();
 			context.setApplicationStartup(this.applicationStartup);
+//			6. 初始化ApplicationContext设置Environment加载相关配置等
+//				1. 由 SpringApplicationRunListener 来发出contextPrepared 消息，告知SpringBoot 应用使用的 ApplicationContext 已准备OK
+//				2. 将各种 beans 装载入 ApplicationContext，继续由 SpringApplicationRunListener 来发出 contextLoaded 消息，告知 SpringBoot 应用使用的 ApplicationContext 已装填OK
 			prepareContext(bootstrapContext, context, environment, listeners, applicationArguments, printedBanner);
+			// 7. refresh ApplicationContext，完成IoC容器可用的最后一步
 			refreshContext(context);
 			afterRefresh(context, applicationArguments);
 			stopWatch.stop();
 			if (this.logStartupInfo) {
 				new StartupInfoLogger(this.mainApplicationClass).logStarted(getApplicationLog(), stopWatch);
 			}
+			// 8. 由 SpringApplicationRunListener 来发出 started 消息
 			listeners.started(context);
+			// 9. 完成最终的程序的启动
 			callRunners(context, applicationArguments);
 		}
 		catch (Throwable ex) {
@@ -350,6 +361,7 @@ public class SpringApplication {
 		}
 
 		try {
+			// 10. 由 SpringApplicationRunListener 来发出 running 消息，告知程序已运行起来了
 			listeners.running(context);
 		}
 		catch (Throwable ex) {
